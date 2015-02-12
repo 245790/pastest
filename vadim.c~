@@ -1,0 +1,93 @@
+#include <gtk/gtk.h>
+#pragma comment(lib,"gdk-win32-2.0.lib")
+#pragma comment( lib, "gtk-win32-2.0.lib")
+#pragma comment( lib, "glib-2.0.lib")
+
+#include <stdlib.h>
+
+//static void helloWorld (GtkWidget *wid, GtkWidget *win)
+//{
+//  GtkWidget *dialog = NULL;
+//
+//  dialog = gtk_message_dialog_new (GTK_WINDOW (win), GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE, "Hello World!");
+//  gtk_window_set_position (GTK_WINDOW (dialog), GTK_WIN_POS_CENTER);
+//  gtk_dialog_run (GTK_DIALOG (dialog));
+//  gtk_widget_destroy (dialog);
+//}
+
+int main(int argc, char *argv[])
+{
+	GtkWidget *mainWindow = NULL;
+
+	// Initialize GTK+{
+	g_log_set_handler("Gtk", G_LOG_LEVEL_WARNING, (GLogFunc) gtk_false, NULL);
+	gtk_init(&argc, &argv);
+	g_log_set_handler("Gtk", G_LOG_LEVEL_WARNING, g_log_default_handler, NULL);
+	// }Initialize GTK+
+
+	// Create main window{
+	mainWindow = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	gtk_container_set_border_width(GTK_CONTAINER(mainWindow), 10);
+	gtk_window_set_title(GTK_WINDOW(mainWindow), "Программа тестирования знаний языка Pascal");
+	gtk_window_resize(GTK_WINDOW(mainWindow), 640, 480);
+	gtk_window_set_position(GTK_WINDOW(mainWindow), GTK_WIN_POS_CENTER);
+	gtk_widget_realize(mainWindow);
+	g_signal_connect(mainWindow, "destroy", gtk_main_quit, NULL);
+	//}Create main window
+
+	// Create vertical box{
+	GtkWidget *verticalBox = NULL;
+	verticalBox = gtk_vbox_new(FALSE, 6);
+	gtk_container_add(GTK_CONTAINER(mainWindow), verticalBox);
+	// }Create vertical box
+
+	// Create question label{
+	GtkWidget *question = NULL;
+	question = gtk_label_new(g_locale_to_utf8("Вас приветствует программа тестирования знаний языка программирования Pascal!Нажмите Продолжить, чтобы начать тест", -1, NULL, NULL, NULL));
+	gtk_container_add(GTK_CONTAINER(verticalBox), question);
+	gtk_label_set_line_wrap(GTK_LABEL(question), TRUE);
+	//gtk_widget_set_size_request(question, 600, 150);
+	// }Create question label
+
+	// Create four answer variants{
+	GtkWidget *answers[4];
+	answers[0] = gtk_radio_button_new_with_label(NULL, "lalala");
+	int i;
+	for (i = 1; i < 4; i++)
+	{
+		answers[i] = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(answers[0]), "lalalal");
+	}
+	for (i = 0; i < 4; i++)
+	{
+		gtk_container_add(GTK_CONTAINER(verticalBox), answers[i]);
+	}
+	// }Create four answer variants
+
+	// Create horizontal box{
+	GtkWidget *horizontalBox;
+	horizontalBox = gtk_hbox_new(FALSE, 6);
+	gtk_box_pack_end(GTK_BOX(verticalBox), horizontalBox, FALSE, FALSE, NULL);
+	//gtk_container_add(GTK_CONTAINER(verticalBox), horizontalBox);
+	// }Create horizontal box
+
+	// Create buttons ">>" and "<<"{
+	GtkWidget *buttonBack;
+	buttonBack = gtk_button_new_from_stock(GTK_STOCK_GO_BACK);
+	gtk_box_pack_end(GTK_BOX(horizontalBox), buttonBack, FALSE, FALSE, 0);
+	//gtk_container_add(GTK_CONTAINER(horizontalBox), buttonBack);
+	GtkWidget *buttonForward;
+	buttonForward = gtk_button_new_from_stock(GTK_STOCK_MEDIA_FORWARD);
+	gtk_box_pack_end(GTK_BOX(horizontalBox), buttonForward, FALSE, FALSE, 0);
+	//gtk_container_add(GTK_CONTAINER(horizontalBox), buttonForward);
+	// }Create buttons ">>" and "<<"
+
+	// Enter the main loop
+	gtk_widget_show_all(mainWindow);
+	for (i = 0; i < 4; i++)
+	{
+		gtk_widget_hide(answers[i]);
+	}
+	gtk_widget_hide(buttonBack);
+	gtk_main();
+	return 0;
+}
