@@ -3,6 +3,8 @@
 #include <vector>
 #include <time.h>
 #include <map>
+#include <iostream>
+#include <string.h>
 
 using namespace std;
 
@@ -47,6 +49,9 @@ int currentQuestionNumber;
 
 //How many questions will be in the test
 int testSize;
+
+//Will be used to count student's score and also check correcr radioButtons when he presses ">>" or "<<"
+vector<int> answerBlank;
 //}Globals
 
 //Function prototypes{
@@ -64,6 +69,10 @@ static gboolean nextQuestion(GtkWidget *buttonForward,
                              GdkEventButton *event,
                              gpointer data );
 
+static gboolean submit(GtkWidget *submitButton, 
+                       GdkEventButton *event,
+                       gpointer data );
+
 // static gboolean changeQuestion(GtkWidget *startButton, 
 //                                GdkEventButton *event,
 //                                gpointer data );
@@ -79,6 +88,7 @@ GtkWidget *horizontalBox;
 GtkWidget *buttonBack;
 GtkWidget *buttonForward;
 GtkWidget *buttonStart;
+GtkWidget *buttonSubmit;
 //}All GTK widgets
 
 int main (int argc, char *argv[])
@@ -180,6 +190,15 @@ int main (int argc, char *argv[])
    }
    //}Fill questionsVector
 
+   //Fill answer blank{
+
+   for(int i = 0; i < testSize; i++)
+   {
+      answerBlank.push_back(-1);
+   }
+
+   //}Fill answer blank
+
    //const char* mainFont = "Tahoma 20";
 
    currentQuestionNumber = 0;
@@ -239,10 +258,19 @@ int main (int argc, char *argv[])
    gtk_box_pack_start (GTK_BOX (verticalBox), horizontalBox, FALSE, FALSE, 10);
    // }Create horizontal box
 
+   
+
    // Create buttons ">>" and "<<"{
    buttonBack = gtk_button_new_with_label("<<");
    gtk_box_pack_start (GTK_BOX (horizontalBox), buttonBack, TRUE, TRUE, 10);
    g_signal_connect (buttonBack, "button_press_event", G_CALLBACK(previousQuestion), NULL);
+
+   // Create "Submit" button{
+   buttonSubmit = gtk_button_new_with_label(g_locale_to_utf8("Сдать работу", -1, NULL, NULL, NULL));
+   gtk_box_pack_start (GTK_BOX (horizontalBox), buttonSubmit, TRUE, TRUE, 10);
+   g_signal_connect (buttonSubmit, "button_press_event", G_CALLBACK(submit), NULL);
+   // }Create "Submit" button
+
    buttonForward = gtk_button_new_with_label(">>");
    gtk_box_pack_start (GTK_BOX (horizontalBox), buttonForward, TRUE, TRUE, 10);
    g_signal_connect (buttonForward, "button_press_event", G_CALLBACK(nextQuestion), NULL);
@@ -250,7 +278,7 @@ int main (int argc, char *argv[])
 
    // Create "Start" button{
    buttonStart = gtk_button_new_with_label(g_locale_to_utf8("Начать тест", -1, NULL, NULL, NULL));
-   gtk_box_pack_start (GTK_BOX (horizontalBox), buttonStart, TRUE, TRUE, 10);
+   gtk_box_pack_end (GTK_BOX (horizontalBox), buttonStart, TRUE, TRUE, 10);
    g_signal_connect (buttonStart, "button_press_event", G_CALLBACK(startTest), NULL);
    // }Create "Start" button
 
@@ -262,16 +290,18 @@ int main (int argc, char *argv[])
    }
    gtk_widget_hide(buttonBack);
    gtk_widget_hide(buttonForward);
+   gtk_widget_hide(buttonSubmit);
    gtk_main ();
    return 0;
 }
 
 static gboolean startTest(GtkWidget *startButton, 
                           GdkEventButton *event,
-                          gpointer data )
+                          gpointer data)
 {
    gtk_widget_show_all(verticalBox);
    gtk_widget_hide(startButton);
+   gtk_widget_hide(buttonSubmit);
    gtk_label_set_text(GTK_LABEL(questionLabel), g_locale_to_utf8(questionsVector[currentQuestionNumber].getQuestion(), -1, NULL, NULL, NULL));
    if(currentQuestionNumber == 0)
    {
@@ -280,27 +310,107 @@ static gboolean startTest(GtkWidget *startButton,
    return true;
 }
 
+static gboolean submit(GtkWidget *submitButton, 
+                       GdkEventButton *event,
+                       gpointer data )
+{
+   //Count test score
+   int testScore = 0;
+   for(int i = 0; i < testSize; i++)
+   {
+      if(answerBlank[i] == questionsVector[i].getCorrect())
+      {
+         testScore++;
+      }
+   }
+
+   //Hide everything except questionLabel
+   for(int i = 0; i < 3; i++)
+   {
+      gtk_widget_hide(answerRadios[i]);
+   }
+   gtk_widget_hide(buttonBack);
+   gtk_widget_hide(buttonForward);
+   gtk_widget_hide(buttonSubmit);
+
+   //Generate the text for "submit" button
+   gchar* submitButtonContent = "Вы ответили верно на    из    вопросов";
+   // if(testScore < 10)
+   // {
+   //    submitButtonContent[21] = gchar((int)'0' + testScore);
+   // }
+   // else
+   // {
+   //    submitButtonContent[20] = gchar((int)'0' + testScore/10);
+   //    submitButtonContent[21] = gchar((int)'0' + testScore%10);
+   // }
+   // if(testSize < 10)
+   // {
+   //    submitButtonContent[27] = gchar((int)'0' + testSize);
+   // }
+   // else
+   // {
+   //    submitButtonContent[26] = gchar((int)'0' + testSize/10);
+   //    submitButtonContent[27] = gchar((int)'0' + testSize%10);
+   // }
+   // strcat(submitButtonContent, "Вы ответили верно на ");
+   // strcat(submitButtonContent, testScoreString);
+   // strcat(submitButtonContent, " из ");
+   // strcat(submitButtonContent, testSizeString);
+   // strcat(submitButtonContent, " вопросов");
+
+   //Put generated string into questionLabel
+   gtk_label_set_text(GTK_LABEL(questionLabel), g_locale_to_utf8(submitButtonContent, -1, NULL, NULL, NULL));
+   //gtk_label_set_text(GTK_LABEL(questionLabel), g_locale_to_utf8("Карим", -1, NULL, NULL, NULL));
+   return true;
+}
+
 static gboolean previousQuestion(GtkWidget *buttonBack, 
                                  GdkEventButton *event,
                                  gpointer data )
 {
+   //Put student's answer to current question into an answer blank
+   for(int i = 0; i < 3; i++)
+   {
+      if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(answerRadios[i])))
+      {
+         answerBlank[currentQuestionNumber] = i;
+         break;
+      }
+   }
+
+   //Go to the previous question only if it is not first
    if(currentQuestionNumber > 0)
    {
       currentQuestionNumber--;
    }
-   //fill questionLabel with appropriate question
+
+   //Make an appropriate answerRadio checked
+   if(answerBlank[currentQuestionNumber] != -1)
+   {
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(answerRadios[answerBlank[currentQuestionNumber]]), true);
+   }
+   else
+   {
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(answerRadios[0]), true);   
+   }
+
+   //Fill questionLabel with appropriate question
    gtk_label_set_text(GTK_LABEL(questionLabel), g_locale_to_utf8(questionsVector[currentQuestionNumber].getQuestion(), -1, NULL, NULL, NULL));
 
-   //fill the array of answers with appropriate answer variants
+   //Fill the array of answers with appropriate answer variants
    for(int i = 0; i < 3; i++)
    {
       gtk_label_set_text(GTK_LABEL(answerLabels[i]), g_locale_to_utf8(questionsVector[currentQuestionNumber].getAnswer(i), -1, NULL, NULL, NULL));
    }
+
+   //Make "<<" button inactive if it is first question
    if(currentQuestionNumber == 0)
    {
       gtk_widget_set_sensitive(buttonBack, false);
    }
 
+   //Make ">>" button active if it is not the last question
    if(currentQuestionNumber < testSize - 1)
    {
       gtk_widget_set_sensitive(buttonForward, true);
@@ -312,25 +422,57 @@ static gboolean nextQuestion(GtkWidget *buttonForward,
                              GdkEventButton *event,
                              gpointer data )
 {
+   //Put student's answer to current question into an answer blank
+   for(int i = 0; i < 3; i++)
+   {
+      if(gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(answerRadios[i])))
+      {
+         answerBlank[currentQuestionNumber] = i;
+         break;
+      }
+   }
+
+   //Go to the previous question only if it is not last
    if(currentQuestionNumber < testSize - 1)
    {
       currentQuestionNumber++;
    }
-   //fill questionLabel with appropriate question
+
+   //Make an appropriate answerRadio checked
+   if(answerBlank[currentQuestionNumber] != -1)
+   {
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(answerRadios[answerBlank[currentQuestionNumber]]), true);
+   }
+   else
+   {
+      gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(answerRadios[0]), true);   
+   }
+
+   //Fill questionLabel with appropriate question
    gtk_label_set_text(GTK_LABEL(questionLabel), g_locale_to_utf8(questionsVector[currentQuestionNumber].getQuestion(), -1, NULL, NULL, NULL));
 
-   //fill the array of answers with appropriate answer variants
+   //Fill the array of answers with appropriate answer variants
    for(int i = 0; i < 3; i++)
    {
       gtk_label_set_text(GTK_LABEL(answerLabels[i]), g_locale_to_utf8(questionsVector[currentQuestionNumber].getAnswer(i), -1, NULL, NULL, NULL));
    }
+
+   //Make ">>" button inactive if it is last question
    if(currentQuestionNumber == testSize - 1)
    {
       gtk_widget_set_sensitive(buttonForward, false);
    }
+
+   //Make "<<" button active if it is not the first question
    if(currentQuestionNumber > 0)
    {
       gtk_widget_set_sensitive(buttonBack, true);
+   }
+
+   //Special: when the student reaches the last question, the "Submit" button becomes active until it is pressed
+   if(currentQuestionNumber == testSize - 1)
+   {
+      gtk_widget_show(buttonSubmit);
    }
    return true;
 }
