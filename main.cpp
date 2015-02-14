@@ -39,10 +39,14 @@ public:
 };
 
 //Globals{
-//Create vector of questions asked in current session
+//Vector of questions asked in current session
 vector<question> questionsVector;
 
+//Indicates which question from questionsVector is asked now
 int currentQuestionNumber;
+
+//How many questions will be in the test
+int testSize;
 //}Globals
 
 //Function prototypes{
@@ -52,10 +56,30 @@ static gboolean startTest(GtkWidget *startButton,
                              GdkEventButton *event,
                              gpointer data );
 
+static gboolean previousQuestion(GtkWidget *buttonBack, 
+                                 GdkEventButton *event,
+                                 gpointer data );
+
+static gboolean nextQuestion(GtkWidget *buttonForward, 
+                             GdkEventButton *event,
+                             gpointer data );
+
 // static gboolean changeQuestion(GtkWidget *startButton, 
 //                                GdkEventButton *event,
 //                                gpointer data );
 //}Function prototypes
+
+//All GTK widgets{
+GtkWidget *mainWindow;
+GtkWidget *verticalBox;
+GtkWidget *questionLabel;
+GtkWidget *answerRadios[3];
+GtkWidget *answerLabels[3];
+GtkWidget *horizontalBox;
+GtkWidget *buttonBack;
+GtkWidget *buttonForward;
+GtkWidget *buttonStart;
+//}All GTK widgets
 
 int main (int argc, char *argv[])
 {
@@ -135,7 +159,7 @@ int main (int argc, char *argv[])
    //}Вопросы Димы
 
    //Fill questionsVector{
-   int testSize = 10;
+   testSize = 10;
    srand(time(NULL));
    vector<int> numbers;
    for(int i = 0; i < questionsLib.size(); i++)
@@ -160,7 +184,7 @@ int main (int argc, char *argv[])
 
    currentQuestionNumber = 0;
 
-   GtkWidget *mainWindow = NULL;
+   
 
    // Initialize GTK+{
    g_log_set_handler ("Gtk", G_LOG_LEVEL_WARNING, (GLogFunc) gtk_false, NULL);
@@ -179,13 +203,11 @@ int main (int argc, char *argv[])
    //}Create main window
 
    // Create vertical box{
-   GtkWidget *verticalBox = NULL;
    verticalBox = gtk_vbox_new (FALSE, 6);
    gtk_container_add (GTK_CONTAINER (mainWindow), verticalBox);
    // }Create vertical box
 
    // Create question label{
-   GtkWidget *questionLabel = NULL;
    questionLabel = gtk_label_new (g_locale_to_utf8("Вас приветствует программа тестирования знаний языка программирования Pascal! Нажмите Начать тест, когда преподаватель скажет это сделать", -1, NULL, NULL, NULL));
    //gtk_widget_modify_font(questionLabel, pango_font_description_from_string(mainFont));
    gtk_box_pack_start (GTK_BOX (verticalBox), questionLabel, TRUE, FALSE, 10);
@@ -193,49 +215,50 @@ int main (int argc, char *argv[])
    // }Create question label
 
    // Create three answer variants{
-   GtkWidget *answers[3];
-   answers[0] = gtk_radio_button_new_with_label(NULL,questionsVector[currentQuestionNumber].getAnswer(0));
+   answerRadios[0] = gtk_radio_button_new(NULL);
    for(int i = 1; i < 3; i++)
    {
-      answers[i] = gtk_radio_button_new_with_label_from_widget(GTK_RADIO_BUTTON(answers[0]),questionsVector[currentQuestionNumber].getAnswer(i));
+      answerRadios[i] = gtk_radio_button_new_from_widget(GTK_RADIO_BUTTON(answerRadios[0]));
    }
    for(int i = 0; i < 3; i++)
    {
-      gtk_box_pack_start (GTK_BOX (verticalBox), answers[i], FALSE, FALSE, 10);
+      answerLabels[i] = gtk_label_new (g_locale_to_utf8(questionsVector[currentQuestionNumber].getAnswer(i), -1, NULL, NULL, NULL));
+   }
+   for(int i = 0; i < 3; i++)
+   {
+      gtk_container_add(GTK_CONTAINER(answerRadios[i]), GTK_WIDGET(answerLabels[i]));
+   }
+   for(int i = 0; i < 3; i++)
+   {
+      gtk_box_pack_start (GTK_BOX (verticalBox), answerRadios[i], FALSE, FALSE, 10);
    }
    // }Create three answer variants
 
    // Create horizontal box{
-   GtkWidget *horizontalBox;
    horizontalBox = gtk_hbox_new (FALSE, 6);
    gtk_box_pack_start (GTK_BOX (verticalBox), horizontalBox, FALSE, FALSE, 10);
    // }Create horizontal box
 
    // Create buttons ">>" and "<<"{
-   GtkWidget *buttonBack;
    buttonBack = gtk_button_new_with_label("<<");
    gtk_box_pack_start (GTK_BOX (horizontalBox), buttonBack, TRUE, TRUE, 10);
-   GtkWidget *buttonForward;
+   g_signal_connect (buttonBack, "button_press_event", G_CALLBACK(previousQuestion), NULL);
    buttonForward = gtk_button_new_with_label(">>");
    gtk_box_pack_start (GTK_BOX (horizontalBox), buttonForward, TRUE, TRUE, 10);
+   g_signal_connect (buttonForward, "button_press_event", G_CALLBACK(nextQuestion), NULL);
    // }Create buttons ">>" and "<<"
 
    // Create "Start" button{
-   GtkWidget *buttonStart;
    buttonStart = gtk_button_new_with_label(g_locale_to_utf8("Начать тест", -1, NULL, NULL, NULL));
    gtk_box_pack_start (GTK_BOX (horizontalBox), buttonStart, TRUE, TRUE, 10);
-   vector<GtkWidget*> labelAndRadios; //startTest function needs either questionLabel or array of radioButtons
-   labelAndRadios.push_back(questionLabel);
-   labelAndRadios.push_back(verticalBox);
-   //g_signal_connect (buttonStart, "button_press_event", G_CALLBACK(showVariants), verticalBox);
-   g_signal_connect (buttonStart, "button_press_event", G_CALLBACK(startTest), labelAndRadios);
+   g_signal_connect (buttonStart, "button_press_event", G_CALLBACK(startTest), NULL);
    // }Create "Start" button
 
    // Enter the main loop
    gtk_widget_show_all(mainWindow);
    for(int i = 0; i < 3; i++)
    {
-      gtk_widget_hide(answers[i]);
+      gtk_widget_hide(answerRadios[i]);
    }
    gtk_widget_hide(buttonBack);
    gtk_widget_hide(buttonForward);
@@ -243,21 +266,72 @@ int main (int argc, char *argv[])
    return 0;
 }
 
-// static gboolean changeQuestion(GtkWidget *startButton, 
-//                                GdkEventButton *event,
-//                                gpointer data )
-// {
-//    gtk_label_set_text(GTK_LABEL(data), g_locale_to_utf8(questionsVector[currentQuestionNumber].getQuestion(), -1, NULL, NULL, NULL));
-//    return true;
-// }
-
 static gboolean startTest(GtkWidget *startButton, 
+                          GdkEventButton *event,
+                          gpointer data )
+{
+   gtk_widget_show_all(verticalBox);
+   gtk_widget_hide(startButton);
+   gtk_label_set_text(GTK_LABEL(questionLabel), g_locale_to_utf8(questionsVector[currentQuestionNumber].getQuestion(), -1, NULL, NULL, NULL));
+   if(currentQuestionNumber == 0)
+   {
+      gtk_widget_set_sensitive(buttonBack, false);
+   }
+   return true;
+}
+
+static gboolean previousQuestion(GtkWidget *buttonBack, 
+                                 GdkEventButton *event,
+                                 gpointer data )
+{
+   if(currentQuestionNumber > 0)
+   {
+      currentQuestionNumber--;
+   }
+   //fill questionLabel with appropriate question
+   gtk_label_set_text(GTK_LABEL(questionLabel), g_locale_to_utf8(questionsVector[currentQuestionNumber].getQuestion(), -1, NULL, NULL, NULL));
+
+   //fill the array of answers with appropriate answer variants
+   for(int i = 0; i < 3; i++)
+   {
+      gtk_label_set_text(GTK_LABEL(answerLabels[i]), g_locale_to_utf8(questionsVector[currentQuestionNumber].getAnswer(i), -1, NULL, NULL, NULL));
+   }
+   if(currentQuestionNumber == 0)
+   {
+      gtk_widget_set_sensitive(buttonBack, false);
+   }
+
+   if(currentQuestionNumber < testSize - 1)
+   {
+      gtk_widget_set_sensitive(buttonForward, true);
+   }
+   return true;
+}
+
+static gboolean nextQuestion(GtkWidget *buttonForward, 
                              GdkEventButton *event,
                              gpointer data )
 {
-   gtk_widget_show_all(((vector<GtkWidget*>)data)[1]);
-   gtk_widget_hide(startButton);
-   gtk_label_set_text(GTK_LABEL(((vector<GtkWidget*>)data)[0]), g_locale_to_utf8(questionsVector[currentQuestionNumber].getQuestion(), -1, NULL, NULL, NULL));
+   if(currentQuestionNumber < testSize - 1)
+   {
+      currentQuestionNumber++;
+   }
+   //fill questionLabel with appropriate question
+   gtk_label_set_text(GTK_LABEL(questionLabel), g_locale_to_utf8(questionsVector[currentQuestionNumber].getQuestion(), -1, NULL, NULL, NULL));
+
+   //fill the array of answers with appropriate answer variants
+   for(int i = 0; i < 3; i++)
+   {
+      gtk_label_set_text(GTK_LABEL(answerLabels[i]), g_locale_to_utf8(questionsVector[currentQuestionNumber].getAnswer(i), -1, NULL, NULL, NULL));
+   }
+   if(currentQuestionNumber == testSize - 1)
+   {
+      gtk_widget_set_sensitive(buttonForward, false);
+   }
+   if(currentQuestionNumber > 0)
+   {
+      gtk_widget_set_sensitive(buttonBack, true);
+   }
    return true;
 }
 
